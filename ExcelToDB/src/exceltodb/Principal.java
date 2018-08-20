@@ -120,7 +120,7 @@ public class Principal extends Application {
         }else{
             retVal = splRes[0];
         }
-        return splRes[0];
+        return retVal;
     }
     
     //private String orderName(String name){
