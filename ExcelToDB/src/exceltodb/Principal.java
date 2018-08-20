@@ -115,10 +115,8 @@ public class Principal extends Application {
     private String getName(String data){
         String[] splRes = data.split("[(]");
         String retVal = "";
-        if(splRes.length > 2){
-            
+        if(splRes.length > 2){       
             retVal = splRes[0] + splRes[1];
-            System.out.println(retVal.contains("The"));
         }else{
             retVal = splRes[0];
         }
