@@ -5,13 +5,16 @@
  */
 package exceltodb;
 
+import java.io.File;
 import javafx.application.Application;
 import javafx.event.ActionEvent;
 import javafx.event.EventHandler;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
 import javafx.scene.layout.StackPane;
+import javafx.stage.FileChooser;
 import javafx.stage.Stage;
+import javax.swing.JOptionPane;
 
 /**
  *
@@ -19,26 +22,38 @@ import javafx.stage.Stage;
  */
 public class Principal extends Application {
     
+    private File archivoSeleccionado;
+    
     @Override
-    public void start(Stage primaryStage) {
-        Button btn = new Button();
-        btn.setText("Say 'Hello World'");
-        btn.setOnAction(new EventHandler<ActionEvent>() {
-            
+    public void start(Stage escenarioPrincipal) {
+        Button abrirBtn = new Button();
+        abrirBtn.setText("Abrir...");
+        
+        FileChooser lectorDeArchivos = new FileChooser();
+        lectorDeArchivos.setTitle("Abrir...");
+        
+        abrirBtn.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
                 System.out.println("Hello World!");
+                archivoSeleccionado = lectorDeArchivos.showOpenDialog(escenarioPrincipal);
+                if(!archivoSeleccionado.equals(null)){
+                    System.out.println(archivoSeleccionado.getName());
+                }else{
+                    JOptionPane.showMessageDialog(null, "No seleccionó ningún archivo.");
+                }
+                
             }
         });
         
         StackPane root = new StackPane();
-        root.getChildren().add(btn);
+        root.getChildren().add(abrirBtn);
         
         Scene scene = new Scene(root, 300, 250);
         
-        primaryStage.setTitle("Hello World!");
-        primaryStage.setScene(scene);
-        primaryStage.show();
+        escenarioPrincipal.setTitle("ExcelToDB");
+        escenarioPrincipal.setScene(scene);
+        escenarioPrincipal.show();
     }
 
     /**
