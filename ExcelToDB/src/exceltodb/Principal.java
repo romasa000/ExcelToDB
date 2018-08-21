@@ -24,6 +24,9 @@ import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
 import org.apache.poi.ss.usermodel.Row;
 import exceltodb.models.Movie;
+import java.sql.SQLException;
+import javafx.geometry.Pos;
+import javafx.scene.control.ProgressBar;
 
 
 /**
@@ -38,19 +41,26 @@ public class Principal extends Application {
     public void start(Stage escenarioPrincipal) {
         Button abrirBtn = new Button();
         abrirBtn.setText("Abrir...");
+        ProgressBar loadingBar = new ProgressBar(0);
+        loadingBar.setMaxWidth(300);
+        loadingBar.setProgress(0);
         
         FileChooser lectorDeArchivos = new FileChooser();
         lectorDeArchivos.setTitle("Abrir...");
         
         ArrayList<Object> data = new ArrayList<Object>();
         
+        Conexion conexion = new Conexion();
+        
         abrirBtn.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
                 System.out.println("Hello World!");
                 archivoSeleccionado = lectorDeArchivos.showOpenDialog(escenarioPrincipal);
+                conexion.CrearConexion();
                 if(!(archivoSeleccionado == null)){
                     try {
+                        loadingBar.setProgress(0);
                         System.out.println(archivoSeleccionado.getName());
                         POIFSFileSystem POIfs = new POIFSFileSystem(archivoSeleccionado);
                         HSSFWorkbook libro = new HSSFWorkbook(POIfs);
@@ -60,6 +70,7 @@ public class Principal extends Application {
                         String row3 = "";
                         String rows = "";
                         String[] rowArr;
+                        double dataInd = (100/Double.parseDouble(hoja.getPhysicalNumberOfRows() + ""))/100;
                         for (int i = 0; i < hoja.getPhysicalNumberOfRows(); i++) {
                             Movie newMovie = new Movie();
                             row1 = hoja.getRow(i).getCell(0).toString();
@@ -72,24 +83,27 @@ public class Principal extends Application {
                             
                             rows = row1 + row2 + row3;
                             rowArr = rows.split("::");
-                            //System.out.println(rowArr[0] + " " + rowArr[1] + " " + rowArr[2]);
-                            
+
                             newMovie.setId(Integer.parseInt(rowArr[0]));
-                            //if(!(row2 == "") || !(row3 == "")){
-                            //    rowArr[1] = orderName(rowArr[1]);
-                            //}
+                            
                             newMovie.setName(getName(rowArr[1]));
                             newMovie.setYear(getYear(rows));
                             newMovie.setCategories(rowArr[2]);
                             
                             System.out.println(newMovie.toString());
+                            //System.out.println(loadingBar.getProgress() + dataInd);
+                            //System.out.println();
+                            //loadingBar.setProgress(loadingBar.getProgress() + dataInd);
+                            //conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO Movies (Id, Name, Year, Categories) VALUES (%d, %s, %s, %s);", newMovie.getId(), "\"" + newMovie.getName() + "\"", "\"" + newMovie.getYear() + "\"", "\"" + newMovie.getCategories() + "\""));
                             
                             data.add(newMovie);
                             row1 = row2 = row3 = "";
                         }       
                     } catch (IOException ex) {
                         ex.printStackTrace();
-                    }
+                    } /*catch (SQLException ex) {
+                        ex.printStackTrace();
+                    }*/
                 }else{
                     JOptionPane.showMessageDialog(null, "No seleccionó ningún archivo.");
                 }
@@ -99,6 +113,8 @@ public class Principal extends Application {
  
         StackPane root = new StackPane();
         root.getChildren().add(abrirBtn);
+        root.getChildren().add(loadingBar);
+        root.setAlignment(loadingBar, Pos.BOTTOM_CENTER);
         
         Scene scene = new Scene(root, 300, 250);
         
