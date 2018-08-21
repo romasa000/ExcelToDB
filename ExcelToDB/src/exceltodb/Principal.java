@@ -89,21 +89,26 @@ public class Principal extends Application {
                             newMovie.setName(getName(rowArr[1]));
                             newMovie.setYear(getYear(rows));
                             newMovie.setCategories(rowArr[2]);
-                            
+                            String[] categories = newMovie.getCategories().split("\\|");
+                            System.out.println(newMovie.getCategories());
                             System.out.println(newMovie.toString());
                             //System.out.println(loadingBar.getProgress() + dataInd);
                             //System.out.println();
                             //loadingBar.setProgress(loadingBar.getProgress() + dataInd);
-                            //conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO Movies (Id, Name, Year, Categories) VALUES (%d, %s, %s, %s);", newMovie.getId(), "\"" + newMovie.getName() + "\"", "\"" + newMovie.getYear() + "\"", "\"" + newMovie.getCategories() + "\""));
+                            conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO Movies (Id, Name, Year) VALUES (%d, %s, %s);", newMovie.getId(), "\"" + newMovie.getName() + "\"", "\"" + newMovie.getYear() + "\""));
+                            for(String cat : categories){
+                                System.out.println(cat);
+                                conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO MoviesCategories (IdMovie, CategoryName) VALUES (%d, %s);", newMovie.getId(), "\"" + cat + "\""));
+                            }
                             
                             data.add(newMovie);
                             row1 = row2 = row3 = "";
                         }       
                     } catch (IOException ex) {
                         ex.printStackTrace();
-                    } /*catch (SQLException ex) {
+                    } catch (SQLException ex) {
                         ex.printStackTrace();
-                    }*/
+                    }
                 }else{
                     JOptionPane.showMessageDialog(null, "No seleccionó ningún archivo.");
                 }
