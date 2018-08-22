@@ -5,6 +5,7 @@
  */
 package exceltodb;
 
+import exceltodb.models.Category;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -22,9 +23,11 @@ import javax.swing.JOptionPane;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
 import org.apache.poi.poifs.filesystem.POIFSFileSystem;
-import org.apache.poi.ss.usermodel.Row;
 import exceltodb.models.Movie;
+import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.Set;
 import javafx.geometry.Pos;
 import javafx.scene.control.ProgressBar;
 
@@ -48,7 +51,7 @@ public class Principal extends Application {
         FileChooser lectorDeArchivos = new FileChooser();
         lectorDeArchivos.setTitle("Abrir...");
         
-        ArrayList<Object> data = new ArrayList<Object>();
+        ArrayList<Movie> data = new ArrayList<Movie>();
         
         Conexion conexion = new Conexion();
         
@@ -70,7 +73,8 @@ public class Principal extends Application {
                         String row3 = "";
                         String rows = "";
                         String[] rowArr;
-                        double dataInd = (100/Double.parseDouble(hoja.getPhysicalNumberOfRows() + ""))/100;
+                        Set<String> categoriesAll =  new HashSet<String>();
+                        //double dataInd = (100/Double.parseDouble(hoja.getPhysicalNumberOfRows() + ""))/100;
                         for (int i = 0; i < hoja.getPhysicalNumberOfRows(); i++) {
                             Movie newMovie = new Movie();
                             row1 = hoja.getRow(i).getCell(0).toString();
@@ -89,26 +93,25 @@ public class Principal extends Application {
                             newMovie.setName(getName(rowArr[1]));
                             newMovie.setYear(getYear(rows));
                             newMovie.setCategories(rowArr[2]);
-                            String[] categories = newMovie.getCategories().split("\\|");
-                            System.out.println(newMovie.getCategories());
-                            System.out.println(newMovie.toString());
+                            String[] categories = getCategoriesFromMovie(newMovie.getCategories());
+                            //System.out.println(newMovie.getCategories());
+                            //System.out.println(newMovie.toString());
                             //System.out.println(loadingBar.getProgress() + dataInd);
                             //System.out.println();
                             //loadingBar.setProgress(loadingBar.getProgress() + dataInd);
-                            conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO Movies (Id, Name, Year) VALUES (%d, %s, %s);", newMovie.getId(), "\"" + newMovie.getName() + "\"", "\"" + newMovie.getYear() + "\""));
+                            //conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO Movies (Id, Name, Year) VALUES (%d, %s, %s);", newMovie.getId(), "\"" + newMovie.getName() + "\"", "\"" + newMovie.getYear() + "\""));
                             for(String cat : categories){
-                                System.out.println(cat);
-                                conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO MoviesCategories (IdMovie, CategoryName) VALUES (%d, %s);", newMovie.getId(), "\"" + cat + "\""));
+                                categoriesAll.add(cat);
                             }
-                            
                             data.add(newMovie);
                             row1 = row2 = row3 = "";
-                        }       
+                        }
+                        sendDatatoDB(categoriesAll, data, conexion);
                     } catch (IOException ex) {
                         ex.printStackTrace();
-                    } catch (SQLException ex) {
+                    } /*catch (SQLException ex) {
                         ex.printStackTrace();
-                    }
+                    }*/
                 }else{
                     JOptionPane.showMessageDialog(null, "No seleccionó ningún archivo.");
                 }
@@ -142,6 +145,55 @@ public class Principal extends Application {
             retVal = splRes[0];
         }
         return retVal;
+    }
+    
+    private void sendDatatoDB(Set Categories, ArrayList<Movie> Movies, Conexion conexion){
+        ArrayList<Category> categoriesArr = new ArrayList<Category>();
+        for(Object cat : Categories){
+            try {
+                conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO Categories (CategoryName) VALUES (%s);", "\"" + cat + "\""));
+                System.out.println(String.valueOf(cat));
+            } catch (SQLException ex) {
+                ex.printStackTrace();
+            }
+        }
+        try{
+            ResultSet categoriesFromDB = conexion.getConexionGlobal().createStatement().executeQuery(String.format("SELECT * FROM Categories;"));
+            while(categoriesFromDB.next()){
+                categoriesArr.add(new Category(categoriesFromDB.getInt("Id"), categoriesFromDB.getString("CategoryName")));
+            }
+            for(Movie movie : Movies){
+                conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO Movies (Id, Name, Year) VALUES (%d, %s, %s);", movie.getId(), "\"" + movie.getName() + "\"", "\"" + movie.getYear() + "\"")); 
+                for(String categoryStr : getCategoriesFromMovie(movie.getCategories())){
+                    Category categoryMovie = new Category(getCategoryId(categoriesArr, categoryStr), categoryStr);
+                    conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO MoviesCategories (IdMovie, IdCategory) VALUES (%d, %d);", movie.getId(), getCategoryId(categoriesArr, categoryMovie.getCategoryName())));
+                    System.out.println(categoryStr);
+                }
+                //System.out.println(getCategoriesFromMovie(movie.getCategories())[0]);
+                //System.out.println(getCategoryId(categoriesArr, getCategoriesFromMovie(movie.getCategories())[0]));
+            }
+        }catch(SQLException ex){
+            ex.printStackTrace();
+        }
+        
+    }
+    
+    private String[] getCategoriesFromMovie(String catStr){
+        return catStr.split("\\|");
+    }
+    
+    private int getCategoryId(ArrayList<Category> Categories, String searchVal){
+        int selId = 0;
+        for(Category cat : Categories){
+            if(cat.getCategoryName().equals(searchVal)){
+                selId = cat.getId();
+                break;
+            }else{
+                selId = 0;
+                //break;
+            }
+        }
+        return selId;
     }
     
     //private String orderName(String name){
