@@ -21,7 +21,6 @@ public class Conexion {
         try{
             Class.forName("com.mysql.cj.jdbc.Driver").newInstance();
             conexionGlobal = DriverManager.getConnection("jdbc:mysql://localhost/db_ronald_tests?user=ronald&password=ronald&useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC");
-            System.out.println("dfad00");
         }catch(SQLException e){
             e.printStackTrace();
         } catch (ClassNotFoundException e) {

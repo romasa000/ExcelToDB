@@ -40,6 +40,8 @@ public class Principal extends Application {
     
     private File archivoSeleccionado;
     
+    private double dataPer = 0;
+    
     @Override
     public void start(Stage escenarioPrincipal) {
         Button abrirBtn = new Button();
@@ -47,6 +49,8 @@ public class Principal extends Application {
         ProgressBar loadingBar = new ProgressBar(0);
         loadingBar.setMaxWidth(300);
         loadingBar.setProgress(0);
+        //loadingBarUpd.setLoadingBar(loadingBar);
+        
         
         FileChooser lectorDeArchivos = new FileChooser();
         lectorDeArchivos.setTitle("Abrir...");
@@ -55,16 +59,15 @@ public class Principal extends Application {
         
         Conexion conexion = new Conexion();
         
+        
         abrirBtn.setOnAction(new EventHandler<ActionEvent>() {
             @Override
             public void handle(ActionEvent event) {
-                System.out.println("Hello World!");
                 archivoSeleccionado = lectorDeArchivos.showOpenDialog(escenarioPrincipal);
                 conexion.CrearConexion();
                 if(!(archivoSeleccionado == null)){
                     try {
                         loadingBar.setProgress(0);
-                        System.out.println(archivoSeleccionado.getName());
                         POIFSFileSystem POIfs = new POIFSFileSystem(archivoSeleccionado);
                         HSSFWorkbook libro = new HSSFWorkbook(POIfs);
                         HSSFSheet hoja = libro.getSheetAt(0);
@@ -74,7 +77,6 @@ public class Principal extends Application {
                         String rows = "";
                         String[] rowArr;
                         Set<String> categoriesAll =  new HashSet<String>();
-                        //double dataInd = (100/Double.parseDouble(hoja.getPhysicalNumberOfRows() + ""))/100;
                         for (int i = 0; i < hoja.getPhysicalNumberOfRows(); i++) {
                             Movie newMovie = new Movie();
                             row1 = hoja.getRow(i).getCell(0).toString();
@@ -94,24 +96,17 @@ public class Principal extends Application {
                             newMovie.setYear(getYear(rows));
                             newMovie.setCategories(rowArr[2]);
                             String[] categories = getCategoriesFromMovie(newMovie.getCategories());
-                            //System.out.println(newMovie.getCategories());
-                            //System.out.println(newMovie.toString());
-                            //System.out.println(loadingBar.getProgress() + dataInd);
-                            //System.out.println();
-                            //loadingBar.setProgress(loadingBar.getProgress() + dataInd);
-                            //conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO Movies (Id, Name, Year) VALUES (%d, %s, %s);", newMovie.getId(), "\"" + newMovie.getName() + "\"", "\"" + newMovie.getYear() + "\""));
+                            
                             for(String cat : categories){
                                 categoriesAll.add(cat);
                             }
                             data.add(newMovie);
                             row1 = row2 = row3 = "";
                         }
-                        sendDatatoDB(categoriesAll, data, conexion);
+                        sendDatatoDB(categoriesAll, data, conexion, loadingBar);
                     } catch (IOException ex) {
                         ex.printStackTrace();
-                    } /*catch (SQLException ex) {
-                        ex.printStackTrace();
-                    }*/
+                    }
                 }else{
                     JOptionPane.showMessageDialog(null, "No seleccionó ningún archivo.");
                 }
@@ -121,8 +116,7 @@ public class Principal extends Application {
  
         StackPane root = new StackPane();
         root.getChildren().add(abrirBtn);
-        root.getChildren().add(loadingBar);
-        root.setAlignment(loadingBar, Pos.BOTTOM_CENTER);
+        
         
         Scene scene = new Scene(root, 300, 250);
         
@@ -147,31 +141,36 @@ public class Principal extends Application {
         return retVal;
     }
     
-    private void sendDatatoDB(Set Categories, ArrayList<Movie> Movies, Conexion conexion){
+    private void sendDatatoDB(Set Categories, ArrayList<Movie> Movies, Conexion conexion, ProgressBar loadingBar){
         ArrayList<Category> categoriesArr = new ArrayList<Category>();
+        try {
+            conexion.getConexionGlobal().setAutoCommit(false);
+        } catch (SQLException ex) {
+            Logger.getLogger(Principal.class.getName()).log(Level.SEVERE, null, ex);
+        }
         for(Object cat : Categories){
             try {
-                conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO Categories (CategoryName) VALUES (%s);", "\"" + cat + "\""));
-                System.out.println(String.valueOf(cat));
+                conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO genero (descripcion) VALUES (%s);", "\"" + cat + "\""));
             } catch (SQLException ex) {
                 ex.printStackTrace();
             }
         }
         try{
-            ResultSet categoriesFromDB = conexion.getConexionGlobal().createStatement().executeQuery(String.format("SELECT * FROM Categories;"));
+            ResultSet categoriesFromDB = conexion.getConexionGlobal().createStatement().executeQuery(String.format("SELECT * FROM genero;"));
             while(categoriesFromDB.next()){
-                categoriesArr.add(new Category(categoriesFromDB.getInt("Id"), categoriesFromDB.getString("CategoryName")));
+                categoriesArr.add(new Category(categoriesFromDB.getInt("codigo_genero"), categoriesFromDB.getString("descripcion")));
             }
+            Thread loadUp = new Thread(() -> {
+                loadingBar.setProgress(loadingBar.getProgress() + dataPer);
+            });
             for(Movie movie : Movies){
-                conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO Movies (Id, Name, Year) VALUES (%d, %s, %s);", movie.getId(), "\"" + movie.getName() + "\"", "\"" + movie.getYear() + "\"")); 
+                conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO pelicula (codigo_pelicula, descripcion, anio_produccion) VALUES (%d, %s, %s);", movie.getId(), "\"" + movie.getName() + "\"", "\"" + movie.getYear() + "\"")); 
                 for(String categoryStr : getCategoriesFromMovie(movie.getCategories())){
                     Category categoryMovie = new Category(getCategoryId(categoriesArr, categoryStr), categoryStr);
-                    conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO MoviesCategories (IdMovie, IdCategory) VALUES (%d, %d);", movie.getId(), getCategoryId(categoriesArr, categoryMovie.getCategoryName())));
-                    System.out.println(categoryStr);
+                    conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO pelicula_genero (codigo_pelicula, codigo_genero) VALUES (%d, %d);", movie.getId(), getCategoryId(categoriesArr, categoryMovie.getCategoryName())));
                 }
-                //System.out.println(getCategoriesFromMovie(movie.getCategories())[0]);
-                //System.out.println(getCategoryId(categoriesArr, getCategoriesFromMovie(movie.getCategories())[0]));
             }
+            conexion.getConexionGlobal().commit();
         }catch(SQLException ex){
             ex.printStackTrace();
         }
@@ -190,17 +189,11 @@ public class Principal extends Application {
                 break;
             }else{
                 selId = 0;
-                //break;
             }
         }
         return selId;
     }
-    
-    //private String orderName(String name){
-        //String[] splRes = name.split(" ");
-        //return 
-    //}
-    
+
     /**
      * @param args the command line arguments
      */
