@@ -20,6 +20,7 @@ public class Conexion {
     public void CrearConexion(){
         try{
             Class.forName("com.mysql.cj.jdbc.Driver").newInstance();
+            //conexionGlobal = DriverManager.getConnection("jdbc:mysql://192.168.107.116/overxakmovies?user=practicante&password=Overx@k2018&useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC");
             conexionGlobal = DriverManager.getConnection("jdbc:mysql://localhost/db_ronald_tests?user=ronald&password=ronald&useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC");
         }catch(SQLException e){
             e.printStackTrace();

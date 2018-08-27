@@ -40,7 +40,7 @@ public class Principal extends Application {
     
     private File archivoSeleccionado;
     
-    private double dataPer = 0;
+    private double dataPercentage = 0;
     
     @Override
     public void start(Stage escenarioPrincipal) {
@@ -77,6 +77,8 @@ public class Principal extends Application {
                         String rows = "";
                         String[] rowArr;
                         Set<String> categoriesAll =  new HashSet<String>();
+                        dataPercentage = 100.0/hoja.getPhysicalNumberOfRows();
+                        System.out.println(100.0/hoja.getPhysicalNumberOfRows() + "");
                         for (int i = 0; i < hoja.getPhysicalNumberOfRows(); i++) {
                             Movie newMovie = new Movie();
                             row1 = hoja.getRow(i).getCell(0).toString();
@@ -143,11 +145,6 @@ public class Principal extends Application {
     
     private void sendDatatoDB(Set Categories, ArrayList<Movie> Movies, Conexion conexion, ProgressBar loadingBar){
         ArrayList<Category> categoriesArr = new ArrayList<Category>();
-        try {
-            conexion.getConexionGlobal().setAutoCommit(false);
-        } catch (SQLException ex) {
-            Logger.getLogger(Principal.class.getName()).log(Level.SEVERE, null, ex);
-        }
         for(Object cat : Categories){
             try {
                 conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO genero (descripcion) VALUES (%s);", "\"" + cat + "\""));
@@ -156,21 +153,20 @@ public class Principal extends Application {
             }
         }
         try{
+            double Total = 0.0;
             ResultSet categoriesFromDB = conexion.getConexionGlobal().createStatement().executeQuery(String.format("SELECT * FROM genero;"));
             while(categoriesFromDB.next()){
                 categoriesArr.add(new Category(categoriesFromDB.getInt("codigo_genero"), categoriesFromDB.getString("descripcion")));
             }
-            Thread loadUp = new Thread(() -> {
-                loadingBar.setProgress(loadingBar.getProgress() + dataPer);
-            });
             for(Movie movie : Movies){
+                Total += this.dataPercentage;
+                System.out.println("Completado: " + Math.round(Total) + "%");
                 conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO pelicula (codigo_pelicula, descripcion, anio_produccion) VALUES (%d, %s, %s);", movie.getId(), "\"" + movie.getName() + "\"", "\"" + movie.getYear() + "\"")); 
                 for(String categoryStr : getCategoriesFromMovie(movie.getCategories())){
                     Category categoryMovie = new Category(getCategoryId(categoriesArr, categoryStr), categoryStr);
                     conexion.getConexionGlobal().createStatement().execute(String.format("INSERT INTO pelicula_genero (codigo_pelicula, codigo_genero) VALUES (%d, %d);", movie.getId(), getCategoryId(categoriesArr, categoryMovie.getCategoryName())));
                 }
             }
-            conexion.getConexionGlobal().commit();
         }catch(SQLException ex){
             ex.printStackTrace();
         }
